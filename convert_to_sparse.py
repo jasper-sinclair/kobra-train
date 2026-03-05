@@ -27,7 +27,7 @@ from tqdm import tqdm
 # Constants
 # =========================
 
-# 6 piece types × 64 squares × 2 (us / them)
+# 6 piece types Ã— 64 squares Ã— 2 (us / them)
 INPUT_SIZE = 768
 WHITE = 0
 BLACK = 1
@@ -153,7 +153,7 @@ def extract_indices(fen, perspective):
             file += 1
             continue
 
-        # Convert (rank, file) into square index 0–63
+        # Convert (rank, file) into square index 0â€“63
         sq = rank * 8 + file
 
         piece_type = PIECE_TO_INDEX[c]
@@ -165,7 +165,7 @@ def extract_indices(fen, perspective):
         # Flip board vertically for black perspective
         relative_sq = sq if perspective == WHITE else (sq ^ 56)
 
-        # Compute final 0–767 feature index
+        # Compute final 0â€“767 feature index
         idx = 384 * index_color + 64 * piece_type + relative_sq
         indices.append(idx)
 
@@ -190,7 +190,6 @@ def convert(input_path, output_path, skip_invalid=True):
     with open(input_path, "r") as fin, open(output_path, "wb") as fout:
 
         lines = list(fin)
-        random.shuffle(lines)
 
         for line in tqdm(lines):
 

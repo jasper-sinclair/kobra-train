@@ -211,11 +211,6 @@ class SparseDataset(Dataset):
 
         result = struct.unpack_from("<f", self.mm, ptr)[0]
 
-        # mirror augmentation
-        if torch.rand(1).item() < 0.5:
-            xw, xb = xb, xw
-            result = 1.0 - result
-
         return (
             torch.from_numpy(xw),
             torch.from_numpy(xb),
@@ -239,16 +234,10 @@ class NNUE(nn.Module):
 
     def __init__(self, l1_size):
         super().__init__()
-        self.fc1 = nn.Linear(INPUT_SIZE, l1_size, bias=False)
-        self.fc2 = nn.Linear(l1_size, 1)
+        self.fc1 = nn.Linear(INPUT_SIZE, l1_size)
+        self.fc2 = nn.Linear(l1_size * 2, 1)
 
     def forward(self, xw, xb):
-
-        # feature dropout
-        if self.training:
-            dropout_rate = 0.02
-            xw = xw * (torch.rand_like(xw) > dropout_rate).float()
-            xb = xb * (torch.rand_like(xb) > dropout_rate).float()
 
         hw = torch.clamp(self.fc1(xw), 0, 1)
         hb = torch.clamp(self.fc1(xb), 0, 1)
@@ -256,7 +245,7 @@ class NNUE(nn.Module):
         hw = hw * hw
         hb = hb * hb
 
-        h = hw - hb
+        h = torch.cat([hw, hb], dim=1)
         out = self.fc2(h)
 
         return out.squeeze(1)
@@ -273,6 +262,7 @@ def export_model(model, path, scale):
     """
 
     fc1_w = model.fc1.weight.detach().cpu().numpy()
+    fc1_b = model.fc1.bias.detach().cpu().numpy()
     fc2_w = model.fc2.weight.detach().cpu().numpy()
     fc2_b = model.fc2.bias.detach().cpu().numpy()
 
@@ -290,10 +280,12 @@ def export_model(model, path, scale):
 
         # fc1 bias (none in model → write zeros)
         for j in range(l1_size):
-            f.write(struct.pack("<h", 0))
+            val = int(round(fc1_b[j] * scale))
+            val = max(-32768, min(32767, val))
+            f.write(struct.pack("<h", val))
 
         # fc2 weights
-        for j in range(l1_size):
+        for j in range(l1_size * 2):
             val = int(round(fc2_w[0][j] * scale))
             val = max(-32768, min(32767, val))
             f.write(struct.pack("<h", val))
@@ -351,7 +343,7 @@ def main():
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=3)
 
-    criterion = nn.MSELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     # NEW AMP API (future-proof)
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
@@ -387,9 +379,6 @@ def main():
             xb_w = xb_w.to(device)
             xb_b = xb_b.to(device)
             yb = yb.to(device)
-
-            # label smoothing
-            yb = yb * 0.98 + 0.01
 
             optimizer.zero_grad()
 
@@ -487,8 +476,6 @@ def main():
 
         val_loss /= len(val_loader)
 
-        model.train()
-
         scheduler.step(val_loss)
 
         logger.info("Current LR: %s", optimizer.param_groups[0]["lr"])
@@ -504,9 +491,11 @@ def main():
             torch.save(model.state_dict(), tmp_path)
             os.replace(tmp_path, best_path)
 
-            export_model(model, "network_best.bin", config.get("scale", 128))
-            logger.info("Saved best model and exported network_best.bin")
-            print("Network size:", os.path.getsize("network_best.bin"))
+            export_path = config.get("export_path", "network.bin")
+
+            export_model(model, export_path, config.get("scale", 128))
+            logger.info(f"Saved best model and exported {export_path}")
+            print("Network size:", os.path.getsize(export_path))
 
         state = {
             "epoch": epoch + 1,
