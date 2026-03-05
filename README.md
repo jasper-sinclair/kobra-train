@@ -1,2 +1,2 @@
 # kobra-train
-simple python training modules for chess engine nnue networks
+python training modules for simple chess engine nnue networks
