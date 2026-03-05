@@ -338,7 +338,7 @@ def main():
         batch_size=config.get("batch_size", 256),
         shuffle=True,
         num_workers=config.get("num_workers", 0),
-        pin_memory=use_gpu,
+        pin_memory=use_gpu        
     )
 
     val_loader = DataLoader(
