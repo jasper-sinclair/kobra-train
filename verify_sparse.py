@@ -15,7 +15,8 @@
 import struct
 import random
 import numpy as np
-
+import json
+import os
 
 # =========================
 # Constants
@@ -29,14 +30,64 @@ BLACK = 1
 
 # Piece type mapping (color handled separately)
 PIECE_TO_INDEX = {
-    'P': 0, 'N': 1, 'B': 2, 'R': 3, 'Q': 4, 'K': 5,
-    'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5
+    "P": 0,
+    "N": 1,
+    "B": 2,
+    "R": 3,
+    "Q": 4,
+    "K": 5,
+    "p": 0,
+    "n": 1,
+    "b": 2,
+    "r": 3,
+    "q": 4,
+    "k": 5,
 }
 
 
 # =========================
-# Dense Feature Builder
+# Config loader
 # =========================
+
+
+def load_config(path="config.json"):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+# =========================
+# Parsing
+# =========================
+
+
+def parse_epd_line(line):
+
+    if '"' not in line:
+        return None, None
+
+    result_str = line.split('"')[1]
+
+    if result_str == "1-0":
+        result = 1.0
+    elif result_str == "0-1":
+        result = 0.0
+    elif result_str == "1/2-1/2":
+        result = 0.5
+    else:
+        return None, None
+
+    parts = line.split()
+    fen = " ".join(parts[:4])
+
+    return fen, result
+
+
+# =========================
+# Feature Builder
+# =========================
+
 
 def build_features(fen, perspective):
     """
@@ -48,7 +99,6 @@ def build_features(fen, perspective):
 
     Used here to validate sparse reconstruction.
     """
-
     board_part = fen.split()[0]
     features = np.zeros(INPUT_SIZE, dtype=np.float32)
 
@@ -56,7 +106,8 @@ def build_features(fen, perspective):
     file = 0
 
     for c in board_part:
-        if c == '/':
+
+        if c == "/":
             rank -= 1
             file = 0
             continue
@@ -75,7 +126,6 @@ def build_features(fen, perspective):
 
         # Determine perspective-relative color
         index_color = 1 if piece_color != perspective else 0
-
         # Flip vertically for black perspective
         relative_sq = sq if perspective == WHITE else (sq ^ 56)
 
@@ -92,102 +142,112 @@ def build_features(fen, perspective):
 # =========================
 #
 # We first scan the binary file once to compute record offsets.
-# This mirrors the logic used in SparseDataset.
+def main():
 
-offsets = []
+    config = load_config()
 
-with open("training_sparse.bin", "rb") as f:
-    pos = 0
+    sparse_path = config.get("sparse_training_file", "training_sparse.bin")
+    epd_path = config.get("verification_epd", "quiet.epd")
 
-    while True:
-        header = f.read(2)
+    print("Sparse dataset:", sparse_path)
+    print("EPD reference:", epd_path)
 
+    # Build binary offsets
+    offsets = []
+    with open(sparse_path, "rb") as f:
+
+        pos = 0
+
+        while True:
+
+            header = f.read(2)
         # End of file
-        if not header:
-            break
+            if not header:
+                break
 
-        n_white = header[0]
-        n_black = header[1]
+            n_white = header[0]
+            n_black = header[1]
 
         # Compute full record size
-        record_size = 2 + 2*n_white + 2*n_black + 4
+            record_size = 2 + 2 * n_white + 2 * n_black + 4
 
-        offsets.append(pos)
+            offsets.append(pos)
 
-        # Skip remaining bytes in record
-        f.seek(record_size - 2, 1)
-        pos += record_size
+	        # Skip remaining bytes in record
+            f.seek(record_size - 2, 1)
 
-print("Binary dataset size:", len(offsets))
+            pos += record_size
+
+    print("Binary dataset size:", len(offsets))
+
+    # =========================
+    # Load Original Text Dataset
+    # =========================
+    with open(epd_path, "r") as f:
+        lines = f.readlines()
+
+    print("EPD dataset size:", len(lines))
+
+    # =========================
+    # Randomized Verification
+    # =========================
+    #
+    # We randomly sample 10 positions and verify:
+    #   - White feature vector matches
+    #   - Black feature vector matches
+    #   - Result value matches
+    for _ in range(10):
+
+        idx = random.randint(0, min(len(offsets), len(lines)) - 1)
+
+        line = lines[idx]
+        fen, result = parse_epd_line(line)
+
+        if fen is None:
+            continue
+
+        # Build dense features directly from FEN
+        xw_txt = build_features(fen, WHITE)
+        xb_txt = build_features(fen, BLACK)
+
+        # ----- Binary Sparse Version -----
+        with open(sparse_path, "rb") as f:
+            f.seek(offsets[idx])
+            data = f.read()
+
+        n_white = data[0]
+        n_black = data[1]
+
+        offset = 2
+
+        # Read white indices
+        white_indices = struct.unpack_from(f"<{n_white}H", data, offset)
+        offset += 2 * n_white
+
+        # Read black indices
+        black_indices = struct.unpack_from(f"<{n_black}H", data, offset)
+        offset += 2 * n_black
+
+        # Read result
+        result_bin = struct.unpack_from("<f", data, offset)[0]
+
+        # Reconstruct dense vectors from sparse indices
+        xw_bin = np.zeros(INPUT_SIZE, dtype=np.float32)
+        xb_bin = np.zeros(INPUT_SIZE, dtype=np.float32)
+
+        xw_bin[list(white_indices)] = 1.0
+        xb_bin[list(black_indices)] = 1.0
+
+        # ----- Assertions -----
+
+        # Feature vectors must match exactly
+        assert np.allclose(xw_txt, xw_bin)
+        assert np.allclose(xb_txt, xb_bin)
+        # Target value must match (allow tiny float tolerance)
+        assert abs(result_txt - result_bin) < 1e-6
+
+    print("✅ Verification passed.")
 
 
-# =========================
-# Load Original Text Dataset
-# =========================
-
-with open("training.txt", "r") as f:
-    lines = f.readlines()
-
-print("Text dataset size:", len(lines))
-
-
-# =========================
-# Randomized Verification
-# =========================
-#
-# We randomly sample 10 positions and verify:
-#   - White feature vector matches
-#   - Black feature vector matches
-#   - Result value matches
-
-for _ in range(10):
-
-    idx = random.randint(0, len(offsets) - 1)
-
-    # ----- Original Text Version -----
-
-    fen, result_txt = lines[idx].strip().split("|")
-    result_txt = float(result_txt.strip())
-
-    # Build dense features directly from FEN
-    xw_txt = build_features(fen, WHITE)
-    xb_txt = build_features(fen, BLACK)
-
-    # ----- Binary Sparse Version -----
-
-    with open("training_sparse.bin", "rb") as f:
-        f.seek(offsets[idx])
-        data = f.read()
-
-    n_white = data[0]
-    n_black = data[1]
-    offset = 2
-
-    # Read white indices
-    white_indices = struct.unpack_from(f"<{n_white}H", data, offset)
-    offset += 2 * n_white
-
-    # Read black indices
-    black_indices = struct.unpack_from(f"<{n_black}H", data, offset)
-    offset += 2 * n_black
-
-    # Read result
-    result_bin = struct.unpack_from("<f", data, offset)[0]
-
-    # Reconstruct dense vectors from sparse indices
-    xw_bin = np.zeros(INPUT_SIZE, dtype=np.float32)
-    xb_bin = np.zeros(INPUT_SIZE, dtype=np.float32)
-
-    xw_bin[list(white_indices)] = 1.0
-    xb_bin[list(black_indices)] = 1.0
-
-    # ----- Assertions -----
-
-    # Feature vectors must match exactly
-    assert np.allclose(xw_txt, xw_bin)
-    assert np.allclose(xb_txt, xb_bin)
-
-    # Target value must match (allow tiny float tolerance)
-    assert abs(result_txt - result_bin) < 1e-6
-
-print("✅ All verification tests passed.")
+if __name__ == "__main__":
+    main()
