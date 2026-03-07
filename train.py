@@ -553,12 +553,12 @@ def main():
         torch.save(state, tmp_path)
         os.replace(tmp_path, checkpoint_path)
 
-        export_model(
-            model,
-            f"network_best_epoch_{epoch+1}.bin",
-            config.get("scale", 128),
-        )
-
+        if config.get("save_epoch_networks", True):
+            export_model(
+                model,
+                f"network_epoch_{epoch+1}.bin",
+                config.get("scale", 128),
+            )
 
 if __name__ == "__main__":
     main()

@@ -23,6 +23,7 @@
 import struct
 import json
 import os
+import random
 
 INPUT_SIZE = 768
 
@@ -54,6 +55,9 @@ def main():
     # Optional limit (useful for quickly checking large datasets)
     sample_limit = config.get("dataset_sample_limit", 0)
 
+    # Progress interval (how often to print progress)
+    progress_interval = config.get("verify_progress_interval", 1_000_000)
+
     print("Verifying dataset:", sparse_path)
 
     checked = 0
@@ -74,6 +78,11 @@ def main():
             if not header:
                 break
 
+            # Safety check for truncated file
+            if len(header) < 2:
+                print("WARNING: truncated record header")
+                break
+
             # Number of sparse features for each perspective
             n_white, n_black = header
 
@@ -83,7 +92,13 @@ def main():
             for _ in range(n_white):
 
                 # Each index is stored as uint16
-                idx = struct.unpack("<H", f.read(2))[0]
+                data = f.read(2)
+
+                if len(data) < 2:
+                    print("WARNING: truncated white index")
+                    return
+
+                idx = struct.unpack("<H", data)[0]
 
                 # Feature index must be within NNUE input range
                 if idx >= INPUT_SIZE:
@@ -95,16 +110,30 @@ def main():
             # -------------------------
             for _ in range(n_black):
 
-                idx = struct.unpack("<H", f.read(2))[0]
+                data = f.read(2)
+
+                if len(data) < 2:
+                    print("WARNING: truncated black index")
+                    return
+
+                idx = struct.unpack("<H", data)[0]
 
                 if idx >= INPUT_SIZE:
                     print("BAD INDEX", idx)
                     return
 
             # Skip result value (float32)
-            f.read(4)
+            result_bytes = f.read(4)
+
+            if len(result_bytes) < 4:
+                print("WARNING: truncated result value")
+                return
 
             checked += 1
+
+            # Progress indicator
+            if progress_interval and checked % progress_interval == 0:
+                print(f"checked {checked:,} records")
 
     print("Dataset OK")
     print("Records checked:", checked)

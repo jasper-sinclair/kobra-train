@@ -41,8 +41,8 @@ def main():
     config = load_config()
 
     # Dataset path
-    training_file = config.get("training_file", "training.txt")
-
+    training_file = config.get("training_txt", "training.txt")
+    
     # How many positions to sample (default 20k like original script)
     sample_limit = config.get("dataset_sample_limit", 20000)
 
