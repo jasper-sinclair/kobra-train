@@ -1,4 +1,4 @@
-# perspective_check.py
+# check_perspective_features.py
 # jasper sinclair
 #
 # Quick sanity check for selfplay training data.

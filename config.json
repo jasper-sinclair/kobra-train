@@ -11,13 +11,14 @@
   "scale": 128,
   "l1_size": 256,
 
-  "training_txt": "training.txt",
+  "training_txt": "training_shuffled.txt",
   "training_file": "training_sparse.bin",
 
   "dataset_sample_limit": 0,
   "validation_split": 0.05,
 	
   "shuffle_seed": 42,
+  "shuffle_input": "training.txt",
   "shuffle_output": "training_shuffled.txt",
 
   "checkpoint_path": "checkpoint.pt",
@@ -33,10 +34,11 @@
   "grad_clip": 1.0,
   "feature_dropout": 0.0,
 
-  "verification_epd": "quiet.epd",
+  "verification_epd": "training_shuffled.txt",
   "verification_samples": 10,
   "verify_progress_interval": 1000000,
-
+  "verify_sample_limit": 0,
+ 
   "perspective_warning_threshold": 0.2,
 
   "log_every": 1000,

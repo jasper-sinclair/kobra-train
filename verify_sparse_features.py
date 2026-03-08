@@ -1,4 +1,4 @@
-# verify_sparse.py
+# verify_sparse_features.py
 # jasper sinclair
 #
 # Verifies correctness of training_sparse.bin by comparing it against
@@ -136,27 +136,30 @@ def build_filtered_dataset(epd_path, sample_limit=0, shuffle_seed=None):
     dataset = []
     seen = set()
 
+    # Match convert_to_sparse.py behavior:
+    # load all lines first
     with open(epd_path, "r") as f:
+        lines = list(f)
 
-        for line in f:
-
-            fen, result = parse_epd_line(line)
-
-            if fen is None:
-                continue
-
-            if fen in seen:
-                continue
-
-            if len(seen) < MAX_HASH:
-                seen.add(fen)
-
-            dataset.append((fen, result))
-
-    # Optional shuffle (helps detect ordering bugs)
+    # Optional shuffle (must occur BEFORE deduplication)
     if shuffle_seed is not None:
         random.seed(shuffle_seed)
-        random.shuffle(dataset)
+        random.shuffle(lines)
+
+    for line in lines:
+
+        fen, result = parse_epd_line(line)
+
+        if fen is None:
+            continue
+
+        if fen in seen:
+            continue
+
+        if len(seen) < MAX_HASH:
+            seen.add(fen)
+
+        dataset.append((fen, result))
 
     # Optional dataset limit
     if sample_limit > 0:
@@ -272,7 +275,13 @@ def main():
 
         xw_bin[list(white_indices)] = 1.0
         xb_bin[list(black_indices)] = 1.0
-
+        
+        if not np.allclose(xw_txt, xw_bin):
+            print("Mismatch at index", idx)
+            print("TXT active:", np.nonzero(xw_txt)[0][:10])
+            print("BIN active:", np.nonzero(xw_bin)[0][:10])
+            break
+    
         assert np.allclose(xw_txt, xw_bin)
         assert np.allclose(xb_txt, xb_bin)
         assert abs(result - result_bin) < 1e-6

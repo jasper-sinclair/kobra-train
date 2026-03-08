@@ -1,4 +1,4 @@
-# verify_dataset.py
+# verify_sparse_structure.py
 # jasper sinclair
 #
 # Simple integrity check for the sparse NNUE training dataset.

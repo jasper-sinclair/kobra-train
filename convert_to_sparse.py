@@ -72,42 +72,82 @@ def parse_epd_line(line):
 
     line = line.strip()
 
-    # ---------- Selfplay format ----------
+    if not line:
+        return None, None
+
+    # -----------------------------------------
+    # Format: FEN | result   (selfplay)
+    # -----------------------------------------
     if "|" in line:
-        fen_part, score_part = line.split("|", 1)
-
-        fen = fen_part.strip()
-
         try:
+            fen_part, score_part = line.split("|", 1)
+            fen = " ".join(fen_part.strip().split()[:4])
             result = float(score_part.strip())
+            result = max(0.0, min(1.0, result))
+            return fen, result
         except:
-            return None, None
+            pass
 
-        result = max(0.0, min(1.0, result))
-        return fen, result
 
-    # ---------- quiet.epd format ----------
+    # -----------------------------------------
+    # Format: EPD  c9 "1-0"
+    # -----------------------------------------
     if '"' in line:
+        try:
+            result_str = line.split('"')[1]
 
-        parts = line.split('"')
-        if len(parts) < 2:
-            return None, None
+            if result_str == "1-0":
+                result = 1.0
+            elif result_str == "0-1":
+                result = 0.0
+            elif result_str == "1/2-1/2":
+                result = 0.5
+            else:
+                return None, None
 
-        result_str = parts[1]
+            tokens = line.split()
+            fen = " ".join(tokens[:4])
+            return fen, result
+        except:
+            pass
 
-        if result_str == "1-0":
-            result = 1.0
-        elif result_str == "0-1":
-            result = 0.0
-        elif result_str == "1/2-1/2":
-            result = 0.5
-        else:
-            return None, None
 
-        tokens = line.split()
-        fen = " ".join(tokens[:4])
+    # -----------------------------------------
+    # Format: bracket result   [0.5]
+    # -----------------------------------------
+    if "[" in line and "]" in line:
+        try:
+            result = float(line.split("[")[1].split("]")[0])
+            tokens = line.split()
+            fen = " ".join(tokens[:4])
+            return fen, result
+        except:
+            pass
 
-        return fen, result
+
+    # -----------------------------------------
+    # Format: numeric eval at end
+    # convert eval -> probability
+    # -----------------------------------------
+    tokens = line.split()
+
+    if len(tokens) >= 5:
+        try:
+            val = float(tokens[-1])
+
+            # If already probability
+            if 0.0 <= val <= 1.0:
+                result = val
+            else:
+                # Convert centipawn to probability
+                import math
+                result = 1.0 / (1.0 + math.exp(-val / 400.0))
+
+            fen = " ".join(tokens[:4])
+            return fen, result
+        except:
+            pass
+
 
     return None, None
 
@@ -210,7 +250,7 @@ def convert(input_path, output_path, skip_invalid=True, sample_limit=0, shuffle_
                 invalid += 1
                 continue
 
-            key = fen
+            key = fen.split()[0]
             if key in seen:
                 continue
 
