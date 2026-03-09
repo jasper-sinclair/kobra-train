@@ -1,4 +1,5 @@
-NNUE Pipeline
+# NNUE Pipeline
+
 check_selfplay_perspective_features.py
      ↓
 training.txt
@@ -19,9 +20,9 @@ train.py (training_sparse.bin)
 
 
 
-Step-by-step:
+## Step-by-step:
 
-check_selfplay_perspective_features.py
+1️⃣ check_selfplay_perspective_features.py
 
 Purpose:
 
@@ -39,7 +40,7 @@ training.txt
 
 
 
-normalize_dataset.py
+2️⃣ normalize_dataset.py
 
 Purpose:
 
@@ -59,10 +60,11 @@ Example:
 
 rnbqkbnr/... w KQkq - | 0.53
 
+This ensures the verify script sees only one format.
+
 ✔
 
 
-This script ensures the verify script sees only one format.
 
 3️⃣ verify_training_txt.py
 
@@ -88,7 +90,7 @@ no corrupted lines
 
 
 
-shuffle_training_txt.py
+4️⃣ shuffle_training_txt.py
 
 Shuffling after normalization and verification is ideal.
 
@@ -102,7 +104,7 @@ training_shuffled.txt
 
 
 
-convert_to_sparse.py
+5️⃣ convert_to_sparse.py
 
 Converts:
 
@@ -129,7 +131,7 @@ Checks:
 
 feature index < 768
 
-counts valid
+counts valid entries
 
 perspective symmetry
 
