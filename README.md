@@ -1,9 +1,13 @@
 # kobra-train
 python training modules for simple chess engine nnue networks
 
-workflow:
-https://github.com/jasper-sinclair/kobra-train/blob/main/workflow.md
+
 
 nnue:
-https://github.com/jasper-sinclair/kobra-train/blob/main/train.md
+https://github.com/jasper-sinclair/kobra-train/blob/main/docs/train.md
 
+workflow:
+https://github.com/jasper-sinclair/kobra-train/blob/main/docs/workflow.md
+
+pipeline:
+https://github.com/jasper-sinclair/kobra-train/blob/main/docs/pipeline.md
