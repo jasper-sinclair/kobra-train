@@ -27,7 +27,11 @@ def load_config(path="config.json"):
 def main():
 
     config = load_config()
-
+    
+    seed = config.get("shuffle_seed", None)
+    if seed is not None:
+        random.seed(seed)
+        
     input_file = config.get("shuffle_input", "training.txt")
     output_file = config.get("shuffle_output", "training_shuffled.txt")
 
@@ -42,7 +46,8 @@ def main():
     print("\nSplitting dataset into shuffled chunks...")
 
     start = time.time()
-  	# ---- load file ----
+    
+# ---- load file ----
     with open(input_file) as f:
 
         chunk = []

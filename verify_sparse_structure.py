@@ -50,7 +50,7 @@ def main():
     config = load_config()
 
     # Dataset path from config
-    sparse_path = config.get("sparse_training_file", "training_sparse.bin")
+    sparse_path = config.get("training_file", "training_sparse.bin")
 
     # Optional limit (useful for quickly checking large datasets)
     sample_limit = config.get("dataset_sample_limit", 0)

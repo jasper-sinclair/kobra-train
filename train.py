@@ -169,10 +169,10 @@ class SparseDataset(Dataset):
                 n_black = struct.unpack("B", f.read(1))[0]
 
                 record_size = (
-                    2
-                    + 2 * n_white  # two uint8 counts
-                    + 2 * n_black  # white indices
-                    + 4  # black indices  # float32 result
+                    2                  # two uint8 counts
+                    + 2 * n_white      # white indices (uint16)
+                    + 2 * n_black      # black indices (uint16)
+                    + 4                # float32 result
                 )
 
                 offset += record_size
@@ -332,7 +332,11 @@ def main():
     val_size = int(len(dataset) * val_split)
     train_size = len(dataset) - val_size
 
-    train_set, val_set = random_split(dataset, [train_size, val_size])
+    train_set, val_set = random_split(
+        dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(config.get("seed", 42))
+    )
 
     train_loader = DataLoader(
         train_set,

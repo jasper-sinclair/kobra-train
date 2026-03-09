@@ -1,4 +1,5 @@
 # verify_training_txt.py
+# jasper sinclair
 # quick NNUE dataset validation
 
 import sys
@@ -39,7 +40,7 @@ def main():
 
     config = load_config()
 
-    dataset_path = config.get("training_txt", "training.txt")
+    dataset_path = config.get("normalized_txt", "training_normalized.txt")
     max_sample = config.get("verify_sample_limit", 500000)
 
     if len(sys.argv) > 1:
@@ -125,14 +126,20 @@ def main():
                 continue
 
             board = tokens[0]
+            side = tokens[1] if len(tokens) > 1 else "?"
 
             pc = piece_count(board)
             piece_counts.append(pc)
 
-            if board in boards_seen:
+            key = board + side
+            
+            MAX_HASH = 5_000_000
+            
+            if key in boards_seen:
                 duplicates += 1
             else:
-                boards_seen.add(board)
+                if len(boards_seen) < MAX_HASH:
+                    boards_seen.add(key)
 
             # progress display
             now = time.time()

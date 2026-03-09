@@ -202,7 +202,7 @@ def extract_indices(fen, perspective):
         # Determine whether piece belongs to perspective side
         index_color = 1 if piece_color != perspective else 0
 
-	   # Flip board vertically for black perspective
+        # Flip board vertically for black perspective
         relative_sq = sq if perspective == WHITE else (sq ^ 56)
 
         # Compute final 0–767 feature index
@@ -219,43 +219,26 @@ def extract_indices(fen, perspective):
 # =========================
 
 
-def convert(input_path, output_path, skip_invalid=True, sample_limit=0, shuffle_seed=None):
+def convert(input_path, output_path, skip_invalid=True, sample_limit=0):
 
     valid = 0
     invalid = 0
 
-    seen = set()
-    MAX_HASH = 2000000
+    total_lines = sum(1 for _ in open(input_path, "r"))
 
-    with open(input_path, "r") as fin:
+    with open(input_path, "r") as fin, open(output_path, "wb") as fout:
 
-        lines = list(fin)
+        for i, line in enumerate(tqdm(fin, total=total_lines)):
 
-    # Optional shuffle for better dataset mixing
-    if shuffle_seed is not None:
-        random.seed(shuffle_seed)
-        random.shuffle(lines)
-
-    # Optional dataset size limit (useful for debugging large datasets)
-    if sample_limit > 0:
-        lines = lines[:sample_limit]
-
-    with open(output_path, "wb") as fout:
-
-        for line in tqdm(lines):
+            # Optional dataset size limit
+            if sample_limit > 0 and i >= sample_limit:
+                break
 
             fen, result = parse_epd_line(line)
 
             if fen is None:
                 invalid += 1
                 continue
-
-            key = fen.split()[0]
-            if key in seen:
-                continue
-
-            if len(seen) < MAX_HASH:
-                seen.add(key)
 
             # Extract sparse indices for both perspectives
             white_indices = extract_indices(fen, WHITE)
@@ -267,17 +250,17 @@ def convert(input_path, output_path, skip_invalid=True, sample_limit=0, shuffle_
 
             record = bytearray()
 
-            # Write feature counts (uint8)
+            # Write feature counts
             record += struct.pack("B", len(white_indices))
             record += struct.pack("B", len(black_indices))
 
-            # Write white feature indices (uint16)
-            for idx in white_indices:
-                record += struct.pack("<H", idx)
+            # Write white feature indices (uint16) - batch packed
+            if white_indices:
+                record += struct.pack(f"<{len(white_indices)}H", *white_indices)
 
-            # Write black feature indices (uint16)
-            for idx in black_indices:
-                record += struct.pack("<H", idx)
+            # Write black feature indices (uint16) - batch packed
+            if black_indices:
+                record += struct.pack(f"<{len(black_indices)}H", *black_indices)
 
             # Write training target (float32)
             record += struct.pack("<f", result)
@@ -302,7 +285,6 @@ if __name__ == "__main__":
     skip_invalid = config.get("skip_invalid", True)
 
     dataset_sample_limit = config.get("dataset_sample_limit", 0)
-    shuffle_seed = config.get("shuffle_seed", None)
 
     print("Input:", input_path)
     print("Output:", output_path)
@@ -311,8 +293,7 @@ if __name__ == "__main__":
         input_path,
         output_path,
         skip_invalid,
-        dataset_sample_limit,
-        shuffle_seed
+        dataset_sample_limit
     )
 
     print(f"\nValid positions:   {valid}")

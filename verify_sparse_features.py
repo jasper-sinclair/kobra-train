@@ -34,13 +34,12 @@ PIECE_TO_INDEX = {
     "K": 5,
     "p": 0,
     "n": 1,
-    "b": 0 + 2,
+    "b": 2,
     "r": 3,
     "q": 4,
     "k": 5,
 }
 
-MAX_HASH = 2000000
 
 # =========================
 # Config loader
@@ -63,24 +62,16 @@ def parse_epd_line(line):
 
     line = line.strip()
 
-    if '"' not in line:
+    if "|" not in line:
         return None, None
 
-    result_str = line.split('"')[1]
-
-    if result_str == "1-0":
-        result = 1.0
-    elif result_str == "0-1":
-        result = 0.0
-    elif result_str == "1/2-1/2":
-        result = 0.5
-    else:
+    try:
+        fen_part, score_part = line.split("|", 1)
+        fen = " ".join(fen_part.strip().split()[:4])
+        result = float(score_part.strip())
+        return fen, result
+    except:
         return None, None
-
-    parts = line.split()
-    fen = " ".join(parts[:4])
-
-    return fen, result
 
 
 # =========================
@@ -131,39 +122,25 @@ def build_features(fen, perspective):
 # =========================
 
 
-def build_filtered_dataset(epd_path, sample_limit=0, shuffle_seed=None):
+def build_filtered_dataset(epd_path, sample_limit=0):
 
     dataset = []
-    seen = set()
 
     # Match convert_to_sparse.py behavior:
     # load all lines first
     with open(epd_path, "r") as f:
-        lines = list(f)
+        for line in f:
 
-    # Optional shuffle (must occur BEFORE deduplication)
-    if shuffle_seed is not None:
-        random.seed(shuffle_seed)
-        random.shuffle(lines)
+            fen, result = parse_epd_line(line)
 
-    for line in lines:
+            if fen is None:
+                continue
 
-        fen, result = parse_epd_line(line)
+            dataset.append((fen, result))
 
-        if fen is None:
-            continue
-
-        if fen in seen:
-            continue
-
-        if len(seen) < MAX_HASH:
-            seen.add(fen)
-
-        dataset.append((fen, result))
-
-    # Optional dataset limit
-    if sample_limit > 0:
-        dataset = dataset[:sample_limit]
+			# Optional dataset limit
+            if sample_limit and len(dataset) >= sample_limit:
+                break
 
     return dataset
 
@@ -210,7 +187,7 @@ def main():
 
     config = load_config()
 
-    sparse_path = config.get("sparse_training_file", "training_sparse.bin")
+    sparse_path = config.get("training_file", "training_sparse.bin")
     epd_path = config.get("verification_epd", "quiet.epd")
 
     dataset_sample_limit = config.get("dataset_sample_limit", 0)
@@ -226,8 +203,7 @@ def main():
 
     dataset = build_filtered_dataset(
         epd_path,
-        dataset_sample_limit,
-        shuffle_seed,
+        dataset_sample_limit
     )
 
     print("Filtered dataset size:", len(dataset))
