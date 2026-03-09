@@ -1,4 +1,4 @@
-Confirmed Pipeline
+NNUE Pipeline
 check_selfplay_perspective_features.py
      ↓
 training.txt
@@ -16,8 +16,12 @@ verify_sparse_features.py
 verify_sparse_structure.py
      ↓
 train.py (training_sparse.bin)
-Step-by-step verification
-1️⃣ check_selfplay_perspective_features.py
+
+
+
+Step-by-step:
+
+check_selfplay_perspective_features.py
 
 Purpose:
 
@@ -31,9 +35,11 @@ Output:
 
 training.txt
 
-✔ Correct place in pipeline.
+✔
 
-2️⃣ normalize_dataset.py
+
+
+normalize_dataset.py
 
 Purpose:
 
@@ -53,9 +59,10 @@ Example:
 
 rnbqkbnr/... w KQkq - | 0.53
 
-✔ Correct place before verification.
+✔
 
-This ensures the verify script sees only one format.
+
+This script ensures the verify script sees only one format.
 
 3️⃣ verify_training_txt.py
 
@@ -77,9 +84,11 @@ both kings exist
 
 no corrupted lines
 
-✔ Correct location.
+✔
 
-4️⃣ shuffle_training_txt.py
+
+
+shuffle_training_txt.py
 
 Shuffling after normalization and verification is ideal.
 
@@ -89,9 +98,11 @@ Output:
 
 training_shuffled.txt
 
-✔ Correct.
+✔
 
-5️⃣ convert_to_sparse.py
+
+
+convert_to_sparse.py
 
 Converts:
 
@@ -109,7 +120,8 @@ uint16 white_indices[]
 uint16 black_indices[]
 float32 result
 
-✔ Correct stage.
+✔
+
 
 6️⃣ verify_sparse_features.py
 
@@ -121,7 +133,8 @@ counts valid
 
 perspective symmetry
 
-✔ Excellent safety check.
+✔
+
 
 Many pipelines skip this.
 
@@ -137,7 +150,8 @@ float parsing
 
 EOF correctness
 
-✔ Good final validation.
+✔
+
 
 8️⃣ train.py
 
@@ -145,15 +159,12 @@ Uses:
 
 training_sparse.bin
 
-✔ Correct.
+✔
 
-Overall evaluation
 
-Your pipeline now has three validation layers:
+The production pipeline has three validation layers:
 
 Stage	Purpose
 verify_training_txt.py	text dataset validation
 verify_sparse_features.py	feature correctness
 verify_sparse_structure.py	binary file integrity
-
-This is very robust engineering.
