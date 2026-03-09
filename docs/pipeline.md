@@ -1,20 +1,28 @@
 # NNUE Pipeline
 
 check_selfplay_perspective_features.py
+
      ↓
 training.txt
+
      ↓
 normalize_dataset.py
+
      ↓
 verify_training_txt.py
+
      ↓
 shuffle_training_txt.py
+
      ↓
 convert_to_sparse.py
+
      ↓
 verify_sparse_features.py
+
      ↓
 verify_sparse_structure.py
+
      ↓
 train.py (training_sparse.bin)
 
@@ -125,6 +133,7 @@ float32 result
 ✔
 
 
+
 6️⃣ verify_sparse_features.py
 
 Checks:
@@ -136,6 +145,7 @@ counts valid entries
 perspective symmetry
 
 ✔
+
 
 
 Many pipelines skip this.
@@ -155,6 +165,7 @@ EOF correctness
 ✔
 
 
+
 8️⃣ train.py
 
 Uses:
@@ -166,7 +177,8 @@ training_sparse.bin
 
 The production pipeline has three validation layers:
 
-Stage	Purpose
-verify_training_txt.py	text dataset validation
-verify_sparse_features.py	feature correctness
-verify_sparse_structure.py	binary file integrity
+1️⃣  verify_training_txt.py -> text dataset validation
+
+2️⃣  verify_sparse_features.py ->	feature correctness
+
+3️⃣ verify_sparse_structure.py ->	binary file integrity
