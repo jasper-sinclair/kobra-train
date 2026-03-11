@@ -125,7 +125,7 @@ def main():
                 bad_fen += 1
                 continue
 
-            board = tokens[0]
+            board = tokens[0] + " " + tokens[1]
             side = tokens[1] if len(tokens) > 1 else "?"
 
             pc = piece_count(board)
@@ -169,7 +169,7 @@ def main():
     print("\nLabel distribution:")
     for k in sorted(label_counts):
         pct = label_counts[k] / total * 100
-        print(f" {k:.2f} : {pct:.2f}%")
+        print(f" {k:.3f} : {pct:.2f}%")
 
     if piece_counts:
         avg = sum(piece_counts) / len(piece_counts)

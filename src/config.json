@@ -1,6 +1,6 @@
 {
   "batch_size": 256,
-  "epochs": 24,
+  "epochs": 10,
   "learning_rate": 0.001,
   "lr_decay_factor": 0.5,
   "lr_patience": 3,
@@ -10,7 +10,7 @@
 
   "scale": 128,
   "l1_size": 256,
-  
+
   "raw_training_txt": "training.txt",
   "training_txt": "training_shuffled.txt",
   "training_file": "training_sparse.bin",
@@ -19,7 +19,10 @@
   "dataset_sample_limit": 0,
   "validation_split": 0.05,
 
-  "shuffle_seed": 42,
+  "draw_drop_rate": 0.30,
+
+  "seed": 42,
+
   "shuffle_input": "training_normalized.txt",
   "shuffle_output": "training_shuffled.txt",
 
@@ -30,7 +33,10 @@
 
   "skip_invalid": true,
   "use_amp": true,
-  "seed": 42,
+
+  "quiet_min_ply": 10,
+  "quiet_max_score": 3000,
+  "quiet_min_pieces": 6,
 
   "label_smoothing": 0.0,
   "grad_clip": 1.0,

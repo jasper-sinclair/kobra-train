@@ -28,7 +28,7 @@ def main():
 
     config = load_config()
     
-    seed = config.get("shuffle_seed", None)
+    seed = config.get("seed", None)
     if seed is not None:
         random.seed(seed)
         

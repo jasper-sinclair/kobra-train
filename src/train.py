@@ -7,6 +7,11 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+# Improve CUDA performance
+torch.backends.cudnn.benchmark = True
+torch.set_float32_matmul_precision('high')
+
 from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import struct
@@ -150,7 +155,13 @@ class SparseDataset(Dataset):
         uint16 black_indices[n_black]
         float32 result
     """
-
+    
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["file"] = None
+        state["mm"] = None
+        return state
+    
     def __init__(self, path, sample_limit=0):
         self.path = path
         self.offsets = []
@@ -190,6 +201,11 @@ class SparseDataset(Dataset):
         return len(self.offsets)
 
     def __getitem__(self, idx):
+        
+        if self.mm is None:
+            self.file = open(self.path, "rb")
+            self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
+        
         offset = self.offsets[idx]
         ptr = offset
 
@@ -201,15 +217,14 @@ class SparseDataset(Dataset):
         xw = np.zeros(INPUT_SIZE, dtype=np.float32)
         xb = np.zeros(INPUT_SIZE, dtype=np.float32)
 
-        for _ in range(n_white):
-            idx_val = struct.unpack_from("<H", self.mm, ptr)[0]
-            xw[idx_val] = 1.0
-            ptr += 2
+        white_indices = np.frombuffer(self.mm, dtype=np.uint16, count=n_white, offset=ptr)
+        ptr += 2 * n_white
 
-        for _ in range(n_black):
-            idx_val = struct.unpack_from("<H", self.mm, ptr)[0]
-            xb[idx_val] = 1.0
-            ptr += 2
+        black_indices = np.frombuffer(self.mm, dtype=np.uint16, count=n_black, offset=ptr)
+        ptr += 2 * n_black
+
+        xw[white_indices] = 1.0
+        xb[black_indices] = 1.0
 
         result = struct.unpack_from("<f", self.mm, ptr)[0]
 
@@ -365,8 +380,11 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
 
     # NEW AMP API (future-proof)
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
-
+    if hasattr(torch, "amp"):
+        scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    else:
+        scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    
     start_epoch = 0
     best_val_loss = float("inf")
 
@@ -412,7 +430,7 @@ def main():
 
             if use_amp:
 
-                with torch.amp.autocast("cuda", enabled=True):
+                with torch.cuda.amp.autocast(enabled=True):
                     pred = model(xb_w, xb_b)
                     loss = criterion(pred, yb)
 

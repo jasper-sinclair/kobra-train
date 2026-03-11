@@ -191,7 +191,6 @@ def main():
     epd_path = config.get("verification_epd", "quiet.epd")
 
     dataset_sample_limit = config.get("dataset_sample_limit", 0)
-    shuffle_seed = config.get("shuffle_seed", None)
     verification_samples = config.get("verification_samples", 10)
 
     print("Sparse dataset:", sparse_path)

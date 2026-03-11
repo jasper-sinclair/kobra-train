@@ -1,0 +1,2 @@
+python normalize_dataset.py
+pause
