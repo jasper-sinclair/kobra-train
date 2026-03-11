@@ -1,0 +1,2 @@
+python split_training_txt.py
+pause

@@ -114,6 +114,8 @@ def normalize(input_path, output_path, dataset_sample_limit, skip_invalid):
     valid = 0
     invalid = 0
 
+    draw_drop_rate = config.get("draw_drop_rate", 0.0)
+
     with open(input_path) as fin, open(output_path, "w") as fout:
 
         for i, line in enumerate(fin, 1):
@@ -134,20 +136,18 @@ def normalize(input_path, output_path, dataset_sample_limit, skip_invalid):
                     continue
                 else:
                     raise ValueError("Invalid line")
-                    
+
             # -----------------------------
             # Optional: reduce draw frequency
             # -----------------------------
-            draw_drop_rate = config.get("draw_drop_rate", 0.0)
-
             if result == 0.5 and random.random() < draw_drop_rate:
                 continue
-                    
+
             # Split FEN once for speed
             parts = fen.split()
 
             # Deduplicate by board + side-to-move
-            key = parts[0] + parts[1]
+            key = " ".join(parts[:2])
 
             if key in seen:
                 continue
