@@ -1,6 +1,6 @@
 {
   "batch_size": 256,
-  "epochs": 10,
+  "epochs": 16,
   "learning_rate": 0.001,
   "lr_decay_factor": 0.5,
   "lr_patience": 3,

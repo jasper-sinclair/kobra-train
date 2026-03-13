@@ -55,6 +55,8 @@ def main():
     ctrlz = 0
 
     label_counts = Counter()
+    bucket_counts = Counter()
+
     piece_counts = []
     boards_seen = set()
     duplicates = 0
@@ -118,7 +120,12 @@ def main():
                 bad_label += 1
                 continue
 
+            # exact distribution
             label_counts[label] += 1
+
+            # bucketed distribution (0.01 bins)
+            bucket = int(label * 100) / 100.0
+            bucket_counts[bucket] += 1
 
             tokens = fen.split()
             if len(tokens) < 1:
@@ -132,9 +139,9 @@ def main():
             piece_counts.append(pc)
 
             key = board + side
-            
+
             MAX_HASH = 5_000_000
-            
+
             if key in boards_seen:
                 duplicates += 1
             else:
@@ -166,10 +173,30 @@ def main():
 
     print("\n\nSample size:", total)
 
-    print("\nLabel distribution:")
+    # =========================
+    # Exact label distribution
+    # =========================
+
+    print("\nExact label distribution:")
     for k in sorted(label_counts):
         pct = label_counts[k] / total * 100
-        print(f" {k:.3f} : {pct:.2f}%")
+        print(f" {k:.6f} : {pct:.2f}%")
+
+
+    # =========================
+    # Bucket histogram
+    # =========================
+
+    print("\nBucketed distribution (0.01 bins):")
+
+    for b in sorted(bucket_counts):
+
+        low = b
+        high = b + 0.01
+        pct = bucket_counts[b] / total * 100
+
+        print(f" {low:.2f}-{high:.2f} : {pct:.2f}%")
+
 
     if piece_counts:
         avg = sum(piece_counts) / len(piece_counts)

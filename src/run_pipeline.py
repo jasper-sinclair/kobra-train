@@ -12,6 +12,7 @@ pipeline = [
     "convert_to_sparse.py",
     "verify_sparse_features.py",
     "verify_sparse_structure.py",
+    "train.py",
 ]
 
 def run_step(script):
