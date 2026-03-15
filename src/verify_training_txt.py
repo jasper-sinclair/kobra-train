@@ -42,7 +42,8 @@ def main():
 
     dataset_path = config.get("normalized_txt", "training_normalized.txt")
     max_sample = config.get("verify_sample_limit", 500000)
-
+    show_exact = config.get("verify_exact_label_distribution", True)
+    
     if len(sys.argv) > 1:
         dataset_path = sys.argv[1]
 
@@ -121,7 +122,8 @@ def main():
                 continue
 
             # exact distribution
-            label_counts[label] += 1
+            if show_exact:
+                label_counts[label] += 1
 
             # bucketed distribution (0.01 bins)
             bucket = int(label * 100) / 100.0
@@ -177,10 +179,11 @@ def main():
     # Exact label distribution
     # =========================
 
-    print("\nExact label distribution:")
-    for k in sorted(label_counts):
-        pct = label_counts[k] / total * 100
-        print(f" {k:.6f} : {pct:.2f}%")
+    if show_exact:
+        print("\nExact label distribution:")
+        for k in sorted(label_counts):
+            pct = label_counts[k] / total * 100
+            print(f" {k:.6f} : {pct:.2f}%")
 
 
     # =========================

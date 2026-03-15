@@ -1,14 +1,22 @@
-# convert_selfplay_blocks.py
+# convert_selfplay_blocks_batch.py
 
 import glob
 import math
 
 
+# sigmoid scaling constant (commonly 400–600 for chess evals)
+SCORE_SCALING = 400.0
+
+# clamp scores to avoid extreme probabilities
+MAX_CP = 2000
+
+# filters
+MIN_PLY = 8
+MAX_SCORE = 2000
+
+
 def result_to_prob(r):
-    try:
-        r = int(r.strip())
-    except:
-        return None
+    r = int(r)
 
     if r == 1:
         return 1.0
@@ -20,16 +28,9 @@ def result_to_prob(r):
     return None
 
 
-def score_to_prob(score_str):
-    try:
-        score = int(score_str)
-    except:
-        return None
-
-    # Clamp mate scores so sigmoid doesn't explode
-    score = max(-4000, min(4000, score))
-
-    return 1.0 / (1.0 + math.exp(-score / 400.0))
+def score_to_prob(score_cp):
+    score_cp = max(-MAX_CP, min(MAX_CP, score_cp))
+    return 1.0 / (1.0 + math.exp(-score_cp / SCORE_SCALING))
 
 
 def convert_file(input_path):
@@ -37,17 +38,15 @@ def convert_file(input_path):
     output_path = input_path.replace("_plain.txt", "_training.txt")
 
     fen = None
-    result = None
     score = None
+    result = None
+    ply = None
 
     written = 0
-    bad_results = 0
-    bad_scores = 0
+    skipped_ply = 0
+    skipped_score = 0
 
-    with open(input_path, "r", buffering=1024 * 1024) as fin, \
-         open(output_path, "w", buffering=1024 * 1024) as fout:
-
-        write = fout.write
+    with open(input_path, "r") as fin, open(output_path, "w") as fout:
 
         for line in fin:
 
@@ -56,52 +55,69 @@ def convert_file(input_path):
             if line.startswith("fen "):
                 fen = line[4:].strip()
 
-            elif line.startswith("result "):
-
-                parts = line.split()
-                if len(parts) >= 2:
-                    result = parts[1].strip()
-                else:
-                    result = None
-
             elif line.startswith("score "):
-
-                parts = line.split()
-                if len(parts) >= 2:
-                    score = parts[1].strip()
-                else:
+                try:
+                    score = int(line.split()[1])
+                except:
                     score = None
+
+            elif line.startswith("result "):
+                result = line.split()[1]
+
+            elif line.startswith("ply "):
+                try:
+                    ply = int(line.split()[1])
+                except:
+                    ply = None
 
             elif line == "e":
 
-                if fen and result and score:
+                if fen and ply is not None:
 
-                    p_result = result_to_prob(result)
-                    p_eval = score_to_prob(score)
+                    # filter opening noise
+                    if ply < MIN_PLY:
+                        skipped_ply += 1
+                        fen = score = result = ply = None
+                        continue
 
-                    # use eval only (STM perspective already)
-                    if p_eval is not None:
+                    parts = fen.split()
+                    stm = parts[1]  # side to move
 
-                        tokens = fen.split()
-                        fen4 = " ".join(tokens[:4])
+                    prob = None
 
-                        target = p_eval
+                    if score is not None:
 
-                        write(f"{fen4} | {target:.6f}\n")
+                        # filter extreme scores
+                        if abs(score) > MAX_SCORE:
+                            skipped_score += 1
+                            fen = score = result = ply = None
+                            continue
+
+                        # convert score to white perspective
+                        if stm == "b":
+                            score_adj = -score
+                        else:
+                            score_adj = score
+
+                        prob = score_to_prob(score_adj)
+
+                    elif result is not None:
+
+                        prob = result_to_prob(result)
+
+                    if prob is not None:
+
+                        fen4 = " ".join(parts[:4])
+                        fout.write(f"{fen4} | {prob:.6f}\n")
                         written += 1
 
-                    else:
-                        if p_result is None:
-                            bad_results += 1
-                        if p_eval is None:
-                            bad_scores += 1
-
                 fen = None
-                result = None
                 score = None
+                result = None
+                ply = None
 
-    print("skipped corrupt results:", bad_results)
-    print("skipped corrupt scores:", bad_scores)
+    print("skipped ply <", MIN_PLY, ":", skipped_ply)
+    print("skipped abs(score) >", MAX_SCORE, ":", skipped_score)
 
     return output_path, written
 

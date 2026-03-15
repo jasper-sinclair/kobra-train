@@ -1,2 +1,7 @@
-python split_training_txt.py
+python split_training_txt.py 731704391_training.txt 10000000
+python split_training_txt.py 365846311_training.txt 10000000
+python split_training_txt.py 72310227_training.txt 10000000
+python split_training_txt.py 36243045_training.txt 10000000
+python split_training_txt.py 20631205_training.txt 10000000
+python split_training_txt.py 20000000_training.txt 10000000
 pause

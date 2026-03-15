@@ -109,7 +109,7 @@ def parse_line(line):
 def normalize(input_path, output_path, dataset_sample_limit, skip_invalid):
 
     seen = set()
-    MAX_HASH = 5_000_000
+    MAX_HASH = config.get("max_hash", 5_000_000)
 
     valid = 0
     invalid = 0

@@ -9,7 +9,7 @@
   "device": "auto",
 
   "scale": 128,
-  "l1_size": 256,
+  "l1_size": 384,
 
   "raw_training_txt": "training.txt",
   "training_txt": "training_shuffled.txt",
@@ -17,6 +17,8 @@
   "normalized_txt": "training_normalized.txt",
 
   "dataset_sample_limit": 0,
+  "max_hash": 20000000,
+
   "validation_split": 0.05,
 
   "draw_drop_rate": 0.30,
@@ -46,9 +48,10 @@
   "verification_samples": 10,
   "verify_progress_interval": 1000000,
   "verify_sample_limit": 0,
+  "verify_exact_label_distribution": false,
 
   "perspective_warning_threshold": 0.2,
 
-  "log_every": 1000,
+  "log_every": 5000,
   "mid_checkpoint_every": 5000
 }

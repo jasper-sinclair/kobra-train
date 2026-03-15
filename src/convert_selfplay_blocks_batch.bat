@@ -1,2 +1,0 @@
-python convert_selfplay_blocks_batch.py
-pause
