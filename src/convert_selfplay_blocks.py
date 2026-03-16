@@ -2,18 +2,24 @@
 
 import glob
 import math
+import json
+import os
 
 
-# sigmoid scaling constant (commonly 400–600 for chess evals)
-SCORE_SCALING = 400.0
+# =========================
+# Config loader
+# =========================
 
-# clamp scores to avoid extreme probabilities
-MAX_CP = 2000
+def load_config(path="config.json"):
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
 
-# filters
-MIN_PLY = 8
-MAX_SCORE = 2000
 
+# =========================
+# Probability helpers
+# =========================
 
 def result_to_prob(r):
     r = int(r)
@@ -32,6 +38,10 @@ def score_to_prob(score_cp):
     score_cp = max(-MAX_CP, min(MAX_CP, score_cp))
     return 1.0 / (1.0 + math.exp(-score_cp / SCORE_SCALING))
 
+
+# =========================
+# Convert one file
+# =========================
 
 def convert_file(input_path):
 
@@ -81,7 +91,7 @@ def convert_file(input_path):
                         continue
 
                     parts = fen.split()
-                    stm = parts[1]  # side to move
+                    stm = parts[1]
 
                     prob = None
 
@@ -93,7 +103,7 @@ def convert_file(input_path):
                             fen = score = result = ply = None
                             continue
 
-                        # convert score to white perspective
+                        # convert to white perspective
                         if stm == "b":
                             score_adj = -score
                         else:
@@ -122,7 +132,25 @@ def convert_file(input_path):
     return output_path, written
 
 
+# =========================
+# Main
+# =========================
+
 def main():
+
+    global MAX_CP, MIN_PLY, MAX_SCORE, SCORE_SCALING
+
+    config = load_config()
+
+    SCORE_SCALING = config.get("score_scaling", 400.0)
+    MAX_CP = config.get("max_cp", 2000)
+    MIN_PLY = config.get("min_ply", 8)
+    MAX_SCORE = config.get("max_score", 2000)
+
+    print("Score scaling:", SCORE_SCALING)
+    print("MAX_CP:", MAX_CP)
+    print("MIN_PLY:", MIN_PLY)
+    print("MAX_SCORE:", MAX_SCORE)
 
     files = sorted(glob.glob("*_plain.txt"))
 
